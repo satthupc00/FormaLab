@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- small-size cut (16-40 px, header logo): fewer details, thicker orbit -->
+  <defs>
+    <radialGradient id="ball" cx=".36" cy=".3" r=".8">
+      <stop offset="0" stop-color="#A8E6FF"/>
+      <stop offset=".35" stop-color="#4DA6FF"/>
+      <stop offset="1" stop-color="#1B3AB0"/>
+    </radialGradient>
+  </defs>
+  <g transform="rotate(-14 256 262)">
+    <path d="M24 262A232 80 0 0 1 488 262" fill="none" stroke="#8A1215" stroke-width="48" stroke-linecap="round"/>
+  </g>
+  <circle cx="256" cy="246" r="196" fill="url(#ball)"/>
+  <ellipse cx="186" cy="156" rx="60" ry="36" transform="rotate(-30 186 156)" fill="#fff" opacity=".65"/>
+  <g transform="rotate(-14 256 262)">
+    <path d="M488 262A232 80 0 0 1 24 262" fill="none" stroke="#E5383B" stroke-width="48" stroke-linecap="round"/>
+  </g>
+</svg>

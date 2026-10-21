@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- FormaLab: a glossy look-dev material ball inside a red orbit (turntable / camera path) -->
+  <defs>
+    <radialGradient id="ball" cx=".36" cy=".3" r=".78">
+      <stop offset="0" stop-color="#BFF0FF"/>
+      <stop offset=".22" stop-color="#5BB8FF"/>
+      <stop offset=".62" stop-color="#2F6FE0"/>
+      <stop offset="1" stop-color="#1B2C9E"/>
+    </radialGradient>
+    <linearGradient id="ringF" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FF8A8C"/>
+      <stop offset=".45" stop-color="#E5383B"/>
+      <stop offset="1" stop-color="#A3161A"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7B5CFF" stop-opacity="0"/>
+      <stop offset="1" stop-color="#7B5CFF" stop-opacity=".75"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="256" cy="482" rx="150" ry="20" fill="#000" opacity=".28"/>
+  <!-- back half of the orbit, behind the ball -->
+  <g transform="rotate(-14 256 262)">
+    <path d="M22 262A234 74 0 0 1 490 262" fill="none" stroke="#7E1013" stroke-width="34" stroke-linecap="round"/>
+  </g>
+  <circle cx="256" cy="250" r="190" fill="url(#ball)"/>
+  <circle cx="256" cy="250" r="190" fill="url(#rim)"/>
+  <!-- wireframe on the shadow side: "3D mesh" -->
+  <clipPath id="clip"><circle cx="256" cy="250" r="190"/></clipPath>
+  <g clip-path="url(#clip)" fill="none" stroke="#DDF4FF" stroke-opacity=".32" stroke-width="7">
+    <ellipse cx="256" cy="250" rx="190" ry="62"/>
+    <ellipse cx="256" cy="150" rx="160" ry="44"/>
+    <ellipse cx="256" cy="350" rx="160" ry="44"/>
+    <ellipse cx="256" cy="250" rx="70" ry="190"/>
+    <ellipse cx="256" cy="250" rx="140" ry="190"/>
+    <path d="M256 60V440"/>
+  </g>
+  <ellipse cx="190" cy="160" rx="62" ry="38" transform="rotate(-30 190 160)" fill="#fff" opacity=".7"/>
+  <circle cx="290" cy="118" r="11" fill="#fff" opacity=".55"/>
+  <!-- front half of the orbit, over the ball -->
+  <g transform="rotate(-14 256 262)">
+    <path d="M490 262A234 74 0 0 1 22 262" fill="none" stroke="url(#ringF)" stroke-width="34" stroke-linecap="round"/>
+    <circle cx="420" cy="314" r="30" fill="#FFE680"/>
+    <circle cx="412" cy="306" r="11" fill="#fff" opacity=".8"/>
+  </g>
+</svg>

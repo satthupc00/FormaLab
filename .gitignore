@@ -1,0 +1,10 @@
+node_modules/
+dist/
+out/
+renderer/app.js
+renderer/libs/
+build/release-notes.md
+*.log
+.DS_Store
+Thumbs.db
+.tmp-test/

@@ -1,0 +1,84 @@
+{
+  "name": "formalab",
+  "version": "1.0.0",
+  "description": "Mondiro FormaLab - xem model 3D (FBX, GLB, OBJ) voi PBR, den, HDRI, animation va xuat anh",
+  "main": "main.js",
+  "scripts": {
+    "build": "node scripts/build-renderer.js",
+    "prestart": "node scripts/build-renderer.js",
+    "start": "electron .",
+    "dist": "node scripts/build-renderer.js && set CSC_IDENTITY_AUTO_DISCOVERY=false&&electron-builder --win nsis --x64",
+    "dist:folder": "node scripts/build-renderer.js && set CSC_IDENTITY_AUTO_DISCOVERY=false&&electron-builder --win --x64 --dir"
+  },
+  "author": "Mondiro",
+  "license": "ISC",
+  "dependencies": {
+    "electron-updater": "^6.3.9"
+  },
+  "devDependencies": {
+    "electron": "^44.0.0",
+    "electron-builder": "^26.15.3",
+    "esbuild": "^0.25.0",
+    "three": "0.169.0"
+  },
+  "build": {
+    "appId": "com.mondiro.formalab",
+    "productName": "Mondiro FormaLab",
+    "copyright": "Powered by Mondiro",
+    "files": [
+      "main.js",
+      "license.js",
+      "updater.js",
+      "renderer/**/*",
+      "package.json",
+      "build/icon.png",
+      "build/icon.ico",
+      "build/icon.svg",
+      "build/icon-small.svg",
+      "!**/*.map"
+    ],
+    "extraResources": [
+      {
+        "from": "samples",
+        "to": "samples"
+      },
+      {
+        "from": "hdri",
+        "to": "hdri"
+      }
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "artifactName": "MondiroFormaLab-${version}-setup.${ext}",
+      "perMachine": false,
+      "shortcutName": "Mondiro FormaLab"
+    },
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "satthupc00",
+        "repo": "FormaLab",
+        "releaseType": "release"
+      }
+    ]
+  }
+}

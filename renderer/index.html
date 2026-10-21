@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Mondiro FormaLab</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<script>if (typeof process !== 'undefined' && process.versions && process.versions.electron) document.documentElement.classList.add('electron');</script>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <img class="brand-icon" src="../build/icon-small.svg" alt="">
+      <div class="brand-name"><span><span class="m">Mondiro</span> <span class="a">FormaLab</span></span><span class="latest" id="latestTag" hidden>latest</span></div>
+    </div>
+    <div class="file-info" id="fileInfo">Chưa mở model</div>
+    <div class="tools" id="topTools">
+      <button class="btn" id="openBtn" title="Mở model (Ctrl+O)"><svg class="i"><use href="#ic-open"/></svg>Mở model</button>
+      <button class="ibtn" id="sampleTopBtn" title="Mở model mẫu MonBot"><svg class="i"><use href="#ic-box"/></svg></button>
+      <button class="btn" id="animBtn" title="Nạp thêm animation từ file FBX/GLB khác (Ctrl+Shift+O)" disabled><svg class="i"><use href="#ic-film"/></svg>Thêm animation</button>
+      <button class="btn primary" id="shotBtn" title="Chụp ảnh (Ctrl+S)" disabled><svg class="i"><use href="#ic-camera"/></svg>Chụp ảnh</button>
+      <button class="ibtn upd" id="checkUpdateBtn" title="Kiểm tra cập nhật" aria-label="Kiểm tra cập nhật"><svg class="i"><use href="#ic-refresh"/></svg></button>
+    </div>
+  </header>
+
+  <div class="body">
+    <!-- LEFT: scene + material -->
+    <aside class="side">
+      <div class="sec"><div class="sec-h"><span>Cảnh</span><span id="sceneCount"></span></div></div>
+      <div class="scroll tree" id="tree"><div class="empty-note">Chưa có model</div></div>
+      <label class="row-inline" title="Dùng khi model xuất từ phần mềm có trục Z hướng lên (bị nằm ngửa)"><input type="checkbox" id="ckZup">Model bị nằm (trục Z-up)</label>
+      <div class="divider"></div>
+      <div class="sec">
+        <div class="sec-h"><span>Material</span><span class="tag" id="matTag"></span></div>
+        <div class="mat-head"><select id="matSelect" title="Chọn material" disabled><option>—</option></select></div>
+        <div class="mat-ball" id="matBall"><canvas id="matCanvas"></canvas><span id="matName"></span></div>
+      </div>
+      <div class="scroll" style="padding:0 12px;flex:1" id="matScroll">
+        <div class="slots" id="slots"></div>
+        <div class="mat-params" id="matParams">
+          <div class="row"><label title="Màu nhân với Base Color">Màu tô</label><input type="color" id="mColor" value="#ffffff"><span style="flex:1"></span></div>
+          <div class="row"><label>Roughness</label><input type="range" id="mRough" min="0" max="1" step=".01" value=".6"><span class="val"></span></div>
+          <div class="row"><label>Metallic</label><input type="range" id="mMetal" min="0" max="1" step=".01" value="0"><span class="val"></span></div>
+          <div class="row"><label>Normal</label><input type="range" id="mNormal" min="0" max="3" step=".05" value="1"><span class="val"></span></div>
+          <div class="row"><label>Phát sáng</label><input type="range" id="mEmis" min="0" max="10" step=".1" value="1"><span class="val"></span></div>
+          <div class="row"><label>Height</label><input type="range" id="mBump" min="0" max="5" step=".05" value="1"><span class="val"></span></div>
+          <label class="check" title="Normal map xuất theo chuẩn DirectX (Substance mặc định, Unreal) thì bật lên"><input type="checkbox" id="mDX">Normal map DirectX (đảo kênh G)</label>
+          <label class="check"><input type="checkbox" id="mDouble">Hiện cả 2 mặt</label>
+        </div>
+      <div class="hint" style="padding:4px 0 12px">Thả <b>thư mục texture</b> vào cửa sổ để tự gán theo tên file (<kbd>_BaseColor</kbd> <kbd>_Normal</kbd> <kbd>_ORM</kbd> <kbd>_Roughness</kbd>…). Thả 1 ảnh vào ô để gán riêng.</div>
+      </div>
+    </aside>
+
+    <!-- CENTER: viewport + timeline -->
+    <main class="center">
+      <div class="stage" id="stage">
+        <canvas id="vp" tabindex="0"></canvas>
+        <div class="vtool l">
+          <button class="seg on" data-mode="shaded" title="Shaded (1)">Shaded</button>
+          <button class="seg" data-mode="wire" title="Wireframe (2)">Wireframe</button>
+          <button class="seg" data-mode="uv" title="UV checker (3)">UV</button>
+          <button class="seg" data-mode="matcap" title="Matcap (4)">Matcap</button>
+          <div class="vsep"></div>
+          <select id="channelSel" title="Xem riêng từng kênh texture">
+            <option value="all">Kênh: Tất cả</option><option value="map">Base Color</option><option value="normal">Normal</option>
+            <option value="roughness">Roughness</option><option value="metallic">Metallic</option><option value="ao">AO</option><option value="emissive">Emissive</option>
+          </select>
+        </div>
+        <div class="vtool r">
+          <button class="ibtn on" id="gridBtn" title="Lưới sàn (G)"><svg class="i"><use href="#ic-grid"/></svg></button>
+          <button class="ibtn on" id="shadowBtn" title="Đổ bóng xuống sàn"><svg class="i"><use href="#ic-shadow"/></svg></button>
+          <button class="ibtn" id="bonesBtn" title="Hiện xương (B)"><svg class="i"><use href="#ic-bone"/></svg></button>
+          <button class="ibtn" id="sfBtn" title="Safe frame (Shift+F)"><svg class="i"><use href="#ic-frame"/></svg></button>
+          <div class="vsep"></div>
+          <button class="ibtn" id="fitBtn" title="Căn camera vào model (F)"><svg class="i"><use href="#ic-focus"/></svg></button>
+        </div>
+        <div class="safe" id="safe"><div class="box" id="sfBox"><div class="tag" id="sfTag">1920 × 1080</div></div></div>
+        <div class="axes" id="axesHint">Xoay: chuột trái · Pan: chuột giữa / chuột phải / Shift + chuột trái · Zoom: lăn chuột</div>
+        <div class="empty" id="empty">
+          <div class="card">
+            <h2>Thả model vào đây</h2>
+            <p>FBX · GLB / glTF · OBJ — kèm texture, animation FBX, HDRI .hdr / .exr</p>
+            <div class="acts">
+              <button class="btn primary" id="emptyOpen"><svg class="i"><use href="#ic-open"/></svg>Mở model</button>
+              <button class="btn" id="sampleBtn" title="Robot MonBot có xương, texture PBR và 3 animation"><svg class="i"><use href="#ic-box"/></svg>Mở model mẫu</button>
+            </div>
+            <div class="keys">
+              <span><kbd>Ctrl</kbd> + <kbd>O</kbd></span><span>Mở model</span>
+              <span><kbd>Space</kbd></span><span>Play / Pause animation</span>
+              <span><kbd>F</kbd></span><span>Căn camera vào model</span>
+              <span><kbd>1</kbd> – <kbd>4</kbd></span><span>Shaded / Wireframe / UV / Matcap</span>
+              <span><kbd>Shift</kbd> + <kbd>F</kbd></span><span>Bật / tắt safe frame</span>
+              <span><kbd>Ctrl</kbd> + <kbd>S</kbd></span><span>Chụp ảnh</span>
+            </div>
+          </div>
+        </div>
+        <div class="busy" id="busy" hidden><div class="card"><i class="spinner"></i><div><div id="busyText">Đang mở…</div><div class="prog" id="busyProg" hidden><i></i></div></div><button class="btn" id="busyCancel" hidden>Huỷ</button></div></div>
+        <div class="drop" id="drop"><span>Thả để mở</span></div>
+      </div>
+
+      <div class="timeline disabled" id="timeline">
+        <select class="clip" id="clipSel" title="Chọn animation"><option value="-1">Không có animation</option></select>
+        <button class="ibtn" id="startBtn" title="Về đầu (Home)"><svg class="i"><use href="#ic-start"/></svg></button>
+        <button class="ibtn" id="prevBtn" title="Lùi 1 frame (←)"><svg class="i"><use href="#ic-prev"/></svg></button>
+        <button class="ibtn play" id="playBtn" title="Play / Pause (Space)"><svg class="i" id="playIco"><use href="#ic-pause"/></svg></button>
+        <button class="ibtn" id="nextBtn" title="Tới 1 frame (→)"><svg class="i"><use href="#ic-next"/></svg></button>
+        <div class="tl-track"><div class="ticks"></div><input type="range" id="scrub" min="0" max="1000" value="0" title="Kéo để tua"></div>
+        <div class="time" id="time"><b>0.00s</b> / 0.00s · f 0</div>
+        <select class="speed" id="speedSel" title="Tốc độ"><option value=".25">0.25×</option><option value=".5">0.5×</option><option value="1" selected>1×</option><option value="1.5">1.5×</option><option value="2">2×</option></select>
+        <button class="ibtn on" id="loopBtn" title="Lặp lại (L)"><svg class="i"><use href="#ic-loop"/></svg></button>
+      </div>
+    </main>
+
+    <!-- RIGHT: light / env / render -->
+    <aside class="side right">
+      <div class="tabs" id="tabs">
+        <button class="tab on" data-p="p-light">Ánh sáng</button>
+        <button class="tab" data-p="p-env">Môi trường</button>
+        <button class="tab" data-p="p-render">Xuất ảnh</button>
+        <i class="tab-bar" id="tabBar"></i>
+      </div>
+      <div class="scroll" style="flex:1">
+        <div class="pane on" id="p-light">
+          <div id="lightList"></div>
+          <div class="chips">
+            <button class="chip" data-add="directional">+ Directional</button><button class="chip" data-add="point">+ Point</button><button class="chip" data-add="spot">+ Spot</button>
+          </div>
+          <label class="check"><input type="checkbox" checked id="ckShadow">Đổ bóng xuống sàn</label>
+          <div class="row"><label>Tone map</label><select id="toneSel"><option value="aces">ACES Filmic</option><option value="agx">AgX</option><option value="neutral">Neutral</option><option value="none">Không</option></select></div>
+          <div class="row"><label>Exposure</label><input type="range" min="0" max="3" step=".05" value="1" id="exposure"><span class="val"></span></div>
+        </div>
+        <div class="pane" id="p-env">
+          <div class="sec-label">HDRI</div>
+          <div class="hdri-grid" id="hdriGrid"></div>
+          <label class="check"><input type="checkbox" checked id="ckBg">Hiện HDRI làm nền</label>
+          <div class="row"><label>Xoay</label><input type="range" min="0" max="360" value="0" id="envRot"><span class="val"></span></div>
+          <div class="row"><label>Độ sáng</label><input type="range" min="0" max="3" step=".05" value="1" id="envInt"><span class="val"></span></div>
+          <div class="row"><label>Làm mờ nền</label><input type="range" min="0" max="1" step=".01" value=".25" id="envBlur"><span class="val"></span></div>
+          <div class="row"><label>Màu nền</label><input type="color" id="bgColor" value="#2b2d31"><span class="lbl" style="flex:1;font-size:11.5px">khi tắt HDRI</span></div>
+        </div>
+        <div class="pane" id="p-render">
+          <div class="sec-label">Độ phân giải</div>
+          <div class="res">
+            <input type="number" id="resW" value="1920" min="16" max="8192" title="Chiều rộng (px)">
+            <span class="x">×</span>
+            <input type="number" id="resH" value="1080" min="16" max="8192" title="Chiều cao (px)">
+            <button class="ibtn" id="swapBtn" title="Đổi ngang / dọc"><svg class="i"><use href="#ic-swap"/></svg></button>
+          </div>
+          <div class="chips" id="resPresets">
+            <button class="chip" data-r="1920x1080">1080p</button>
+            <button class="chip" data-r="3840x2160">4K</button>
+            <button class="chip" data-r="2048x2048">Vuông 2K</button>
+            <button class="chip" data-r="1080x1350">4:5</button>
+            <button class="chip" data-r="1080x1920">9:16</button>
+          </div>
+          <label class="check"><input type="checkbox" id="ckSafe">Safe frame — hiện khung vùng render</label>
+          <label class="check"><input type="checkbox" id="ckAlpha">Nền trong suốt (PNG)</label>
+          <div class="row"><label>Định dạng</label><select id="fmtSel"><option value="png">PNG</option><option value="jpg">JPG</option></select></div>
+          <div class="row"><label>Khử răng cưa</label><select id="aaSel"><option value="2">4× (đẹp)</option><option value="1">Tắt</option></select></div>
+          <div class="render-actions">
+            <button class="btn primary" id="shot2" disabled><svg class="i"><use href="#ic-camera"/></svg>Chụp ảnh</button>
+          </div>
+          <div class="sec-label">Video turntable</div>
+          <div class="row"><label>Thời lượng</label><select id="turnSec"><option value="4">4 giây</option><option value="6" selected>6 giây</option><option value="8">8 giây</option><option value="12">12 giây</option></select></div>
+          <div class="render-actions" style="margin-top:4px">
+            <button class="btn" id="turnBtn" disabled><svg class="i"><use href="#ic-turn"/></svg>Quay turntable 360°</button>
+          </div>
+          <p class="hint" style="padding:10px 0 0">Ảnh và video xuất đúng phần nằm trong khung safe frame, theo độ phân giải ở trên.</p>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="foot">
+    <span>Tris <b id="stTris">0</b></span><span>Verts <b id="stVerts">0</b></span><span>Xương <b id="stBones">0</b></span><span>Material <b id="stMats">0</b></span><span>FPS <b id="stFps">0</b></span>
+    <span class="credit">Created by Mondiro</span>
+  </footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="ic-open" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></symbol>
+  <symbol id="ic-film" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/></symbol>
+  <symbol id="ic-camera" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.5"/></symbol>
+  <symbol id="ic-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+  <symbol id="ic-box" viewBox="0 0 24 24"><path d="M12 3 20 7.5v9L12 21 4 16.5v-9Z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></symbol>
+  <symbol id="ic-mesh" viewBox="0 0 24 24"><path d="M4 18 12 4l8 14Z"/><path d="M8 11h8M12 4v14"/></symbol>
+  <symbol id="ic-bone" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8 8l8 8"/></symbol>
+  <symbol id="ic-grid" viewBox="0 0 24 24"><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/><rect x="3" y="3" width="18" height="18" rx="2"/></symbol>
+  <symbol id="ic-shadow" viewBox="0 0 24 24"><circle cx="12" cy="9" r="5"/><ellipse cx="12" cy="20" rx="7" ry="1.6"/></symbol>
+  <symbol id="ic-frame" viewBox="0 0 24 24"><path d="M3 8V4h4M17 4h4v4M21 16v4h-4M7 20H3v-4"/><rect x="7" y="8" width="10" height="8" rx="1"/></symbol>
+  <symbol id="ic-focus" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></symbol>
+  <symbol id="ic-start" viewBox="0 0 24 24"><path d="M6 5v14M18 5 9 12l9 7Z"/></symbol>
+  <symbol id="ic-prev" viewBox="0 0 24 24"><path d="M15 5 8 12l7 7"/></symbol>
+  <symbol id="ic-next" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+  <symbol id="ic-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5Z" fill="currentColor"/></symbol>
+  <symbol id="ic-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14" stroke-width="3"/></symbol>
+  <symbol id="ic-loop" viewBox="0 0 24 24"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></symbol>
+  <symbol id="ic-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="ic-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V16h8v-1.3A7 7 0 0 0 12 2Z"/></symbol>
+  <symbol id="ic-spot" viewBox="0 0 24 24"><path d="M9 3h6l-1 5h-4Z"/><path d="M10 8 5 21h14L14 8"/></symbol>
+  <symbol id="ic-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="ic-eye-off" viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.6 6.6A17 17 0 0 0 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></symbol>
+  <symbol id="ic-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+  <symbol id="ic-swap" viewBox="0 0 24 24"><path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></symbol>
+  <symbol id="ic-turn" viewBox="0 0 24 24"><ellipse cx="12" cy="17" rx="9" ry="3"/><path d="M12 4v9M8 8l4-4 4 4"/></symbol>
+  <symbol id="ic-sparkles" viewBox="0 0 24 24"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8Z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8Z"/></symbol>
+</svg>
+<script src="app.js"></script>
+<script src="license-ui.js"></script>
+</body>
+</html>

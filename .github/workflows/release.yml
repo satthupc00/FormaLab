@@ -1,0 +1,67 @@
+# Builds the Windows installer and publishes it as a GitHub Release whenever the version in
+# package.json (or release-notes.md) changes on the default branch. Installed apps pick the new
+# release up automatically.
+name: Release
+
+on:
+  push:
+    paths: [package.json, release-notes.md, .github/workflows/release.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    if: github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      exists: ${{ steps.v.outputs.exists }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          # A release only counts as done once latest.yml (what installed apps read) is attached;
+          # a half-finished one from a failed run gets rebuilt.
+          if gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' 2>/dev/null | grep -qx latest.yml; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Release v$VERSION already exists, nothing to build."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: check
+    if: needs.check.outputs.exists == 'false'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      # Fails the build if release-notes.md isn't written for this version.
+      - run: node scripts/release-notes.js
+      - run: npm run build
+      # Build only; the release is created below with gh (letting electron-builder create it
+      # failed in Mondiro Toolbox with "Published releases must have a valid tag").
+      # bash, not the default PowerShell, which mangles the -c.releaseInfo... argument
+      - run: npx electron-builder --win nsis --x64 --publish never -c.releaseInfo.releaseNotesFile=build/release-notes.md
+        shell: bash
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      # Removes a half-finished release of this version (if any), then publishes the installer,
+      # its blockmap and latest.yml with the notes (shown in the app's update window).
+      - run: |
+          V="v${{ needs.check.outputs.version }}"
+          gh release delete "$V" --cleanup-tag -y || true
+          gh release create "$V" --target "$GITHUB_SHA" --title "Mondiro FormaLab $V" --notes-file build/release-notes.md \
+            dist/*-setup.exe dist/*-setup.exe.blockmap dist/latest.yml
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
